@@ -1,5 +1,9 @@
 package de.dhbw.caput.tinf21b1b6;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 abstract class RegularExpression {
 	
 	private RegularExpression( ){
@@ -148,5 +152,56 @@ abstract class RegularExpression {
 			return result;
 		}
 	}
-	
+
+	final static class Concat extends RegularExpression {
+		private final List<RegularExpression> asts = new ArrayList<>();
+
+		public Concat(){
+			super();
+		}
+
+		public void addRegularExpression(RegularExpression regex) {
+			asts.add(regex);
+		}
+
+		public RegularExpression popLast() {
+			return asts.remove(asts.size() - 1);
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder builder = new StringBuilder();
+
+			for (RegularExpression regex : asts) {
+				builder.append(regex.toString());
+			}
+
+			return builder.toString();
+		}
+
+		@Override
+		FiniteStateAutomaton generateFSA() {
+			List<FiniteStateAutomaton> fsaAsts = asts.stream().map(RegularExpression::generateFSA).collect(Collectors.toList());
+
+			FiniteStateAutomaton result = new FiniteStateAutomaton();
+
+			if (!fsaAsts.isEmpty()) {
+				result.INITIAL_STATE.addEpsilonTransitionTo(fsaAsts.get(0).INITIAL_STATE);
+
+				FiniteStateAutomaton last = fsaAsts.get(0);
+
+				for (int i = 1; i < fsaAsts.size(); i++) {
+					FiniteStateAutomaton current = fsaAsts.get(i);
+					last.ACCEPTING_STATE.addEpsilonTransitionTo(fsaAsts.get(i).INITIAL_STATE);
+
+					last = current;
+				}
+
+				last.ACCEPTING_STATE.addEpsilonTransitionTo(result.ACCEPTING_STATE);
+			}
+
+			return result;
+		}
+	}
+
 }
